@@ -4,7 +4,7 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password, volcengineApiKey, cozePatToken } = await request.json();
+    const { username, password } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json(
@@ -47,24 +47,6 @@ export async function POST(request: NextRequest) {
         { error: '用户名或密码错误' },
         { status: 401 }
       );
-    }
-
-    // 如果是学生，检查是否提供了 API Key 和 PAT 令牌
-    if (user.role === 'student') {
-      const updates: any = {};
-      if (volcengineApiKey) {
-        updates.volcengine_api_key = volcengineApiKey;
-      }
-      if (cozePatToken) {
-        updates.coze_pat_token = cozePatToken;
-      }
-
-      if (Object.keys(updates).length > 0) {
-        await client
-          .from('users')
-          .update(updates)
-          .eq('id', user.id);
-      }
     }
 
     // 返回用户信息（不包含密码）

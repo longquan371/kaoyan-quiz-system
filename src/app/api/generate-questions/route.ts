@@ -32,34 +32,17 @@ export async function POST(request: NextRequest) {
 
     const user = users[0];
 
-    // 检查火山方舟 API Key
-    if (!user.volcengine_api_key) {
-      return NextResponse.json(
-        { error: '请先配置火山方舟 API Key ID' },
-        { status: 400 }
-      );
-    }
-
-    // 检查扣子 PAT 令牌
-    if (!user.coze_pat_token) {
-      return NextResponse.json(
-        { error: '请先配置扣子 PAT 令牌' },
-        { status: 400 }
-      );
-    }
-
     // 获取示例文档内容
     const docxBuffer = await mammoth.extractRawText({ path: '/tmp/news_exam.docx' });
     const documentContent = docxBuffer.value;
 
     console.log('Document content length:', documentContent.length);
-    console.log('Using Volcengine API Key:', user.volcengine_api_key.substring(0, 10) + '...');
-    console.log('Using Coze PAT Token:', user.coze_pat_token.substring(0, 10) + '...');
+    console.log('Available API Keys configured');
 
     // 调用豆包 LLM 生成题目
-    const config = new Config({
-      apiKey: user.coze_pat_token, // 使用扣子 PAT 令牌
-    });
+    // 在扣子平台上运行时，SDK 会自动从环境变量获取认证信息
+    // 不需要手动提供 apiKey
+    const config = new Config();
     const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
     const llmClient = new LLMClient(config, customHeaders);
 
