@@ -33,7 +33,15 @@ export async function POST(request: NextRequest) {
     const user = users[0];
     if (!user.coze_api_key) {
       return NextResponse.json(
-        { error: '请先配置豆包API Key' },
+        { error: '请先配置豆包API Key（格式：pat_xxxx...）' },
+        { status: 400 }
+      );
+    }
+
+    // 检查 API Key 格式
+    if (!user.coze_api_key.startsWith('pat_')) {
+      return NextResponse.json(
+        { error: '豆包API Key 格式不正确，应以 pat_ 开头' },
         { status: 400 }
       );
     }
@@ -41,6 +49,9 @@ export async function POST(request: NextRequest) {
     // 获取示例文档内容
     const docxBuffer = await mammoth.extractRawText({ path: '/tmp/news_exam.docx' });
     const documentContent = docxBuffer.value;
+
+    console.log('Document content length:', documentContent.length);
+    console.log('API Key format check:', user.coze_api_key.substring(0, 10) + '...');
 
     // 调用豆包 LLM 生成题目
     const config = new Config({
@@ -87,6 +98,8 @@ ${documentContent}
       [{ role: 'user', content: prompt }],
       { temperature: 0.7 }
     );
+
+    console.log('LLM response:', response.content.substring(0, 100) + '...');
 
     // 解析 LLM 返回的 JSON
     const jsonMatch = response.content.match(/\{[\s\S]*\}/);

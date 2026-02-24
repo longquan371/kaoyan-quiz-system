@@ -169,13 +169,19 @@ export default function LoginPage() {
                     <Input
                       id="login-apikey"
                       type="password"
-                      placeholder="请输入您的豆包API Key"
+                      placeholder="请输入您的豆包API Key（格式：pat_xxx...）"
                       value={loginForm.cozeApiKey}
                       onChange={(e) => setLoginForm({ ...loginForm, cozeApiKey: e.target.value })}
                     />
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      老师无需填写，学生请填写您的豆包API Key
-                    </p>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                      <p>⚠️ 老师无需填写，学生必须填写才能使用AI出题</p>
+                      <p className="text-orange-600 dark:text-orange-400">
+                        💡 格式要求：以 <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">pat_</code> 开头
+                      </p>
+                      <p>
+                        📖 获取方式：<a href="https://www.coze.cn/" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">登录豆包官网 → 个人中心 → API管理 → 创建API Key</a>
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
                 <CardFooter>
@@ -240,14 +246,20 @@ export default function LoginPage() {
                     <Input
                       id="register-apikey"
                       type="password"
-                      placeholder="请输入您的豆包API Key"
+                      placeholder="请输入您的豆包API Key（格式：pat_xxx...）"
                       value={registerForm.cozeApiKey}
                       onChange={(e) => setRegisterForm({ ...registerForm, cozeApiKey: e.target.value })}
                       required
                     />
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      学生账户必须填写豆包API Key才能使用AI出题功能
-                    </p>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                      <p>⚠️ 学生账户必须填写豆包API Key才能使用AI出题功能</p>
+                      <p className="text-orange-600 dark:text-orange-400">
+                        💡 格式要求：以 <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">pat_</code> 开头
+                      </p>
+                      <p>
+                        📖 获取方式：<a href="https://www.coze.cn/" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">登录豆包官网 → 个人中心 → API管理 → 创建API Key</a>
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
                 <CardFooter>
