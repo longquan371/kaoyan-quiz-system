@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     // 获取用户信息和 API Key
     const { data: users } = await client
       .from('users')
-      .select('coze_api_key')
+      .select('volcengine_api_key, coze_pat_token')
       .eq('id', userId)
       .limit(1);
 
@@ -31,17 +31,19 @@ export async function POST(request: NextRequest) {
     }
 
     const user = users[0];
-    if (!user.coze_api_key) {
+
+    // 检查火山方舟 API Key
+    if (!user.volcengine_api_key) {
       return NextResponse.json(
-        { error: '请先配置豆包API Key（格式：pat_xxxx...）' },
+        { error: '请先配置火山方舟 API Key ID' },
         { status: 400 }
       );
     }
 
-    // 检查 API Key 格式
-    if (!user.coze_api_key.startsWith('pat_')) {
+    // 检查扣子 PAT 令牌
+    if (!user.coze_pat_token) {
       return NextResponse.json(
-        { error: '豆包API Key 格式不正确，应以 pat_ 开头' },
+        { error: '请先配置扣子 PAT 令牌' },
         { status: 400 }
       );
     }
@@ -51,11 +53,12 @@ export async function POST(request: NextRequest) {
     const documentContent = docxBuffer.value;
 
     console.log('Document content length:', documentContent.length);
-    console.log('API Key format check:', user.coze_api_key.substring(0, 10) + '...');
+    console.log('Using Volcengine API Key:', user.volcengine_api_key.substring(0, 10) + '...');
+    console.log('Using Coze PAT Token:', user.coze_pat_token.substring(0, 10) + '...');
 
     // 调用豆包 LLM 生成题目
     const config = new Config({
-      apiKey: user.coze_api_key,
+      apiKey: user.coze_pat_token, // 使用扣子 PAT 令牌
     });
     const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
     const llmClient = new LLMClient(config, customHeaders);

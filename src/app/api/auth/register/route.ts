@@ -4,11 +4,11 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password, cozeApiKey } = await request.json();
+    const { username, password, volcengineApiKey, cozePatToken } = await request.json();
 
-    if (!username || !password || !cozeApiKey) {
+    if (!username || !password || !volcengineApiKey || !cozePatToken) {
       return NextResponse.json(
-        { error: '用户名、密码和API Key不能为空' },
+        { error: '用户名、密码、火山方舟 API Key ID 和扣子 PAT 令牌不能为空' },
         { status: 400 }
       );
     }
@@ -47,7 +47,8 @@ export async function POST(request: NextRequest) {
         username,
         password: hashedPassword,
         role: 'student',
-        coze_api_key: cozeApiKey,
+        volcengine_api_key: volcengineApiKey,
+        coze_pat_token: cozePatToken,
         total_score: 0,
       })
       .select()

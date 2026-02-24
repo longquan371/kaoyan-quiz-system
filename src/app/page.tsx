@@ -14,13 +14,15 @@ export default function LoginPage() {
   const [loginForm, setLoginForm] = useState({
     username: '',
     password: '',
-    cozeApiKey: '',
+    volcengineApiKey: '',
+    cozePatToken: '',
   });
   const [registerForm, setRegisterForm] = useState({
     username: '',
     password: '',
     confirmPassword: '',
-    cozeApiKey: '',
+    volcengineApiKey: '',
+    cozePatToken: '',
   });
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -47,7 +49,8 @@ export default function LoginPage() {
         body: JSON.stringify({
           username: loginForm.username,
           password: loginForm.password,
-          cozeApiKey: loginForm.cozeApiKey,
+          volcengineApiKey: loginForm.volcengineApiKey,
+          cozePatToken: loginForm.cozePatToken,
         }),
       });
 
@@ -75,8 +78,8 @@ export default function LoginPage() {
       return;
     }
 
-    if (!registerForm.cozeApiKey) {
-      setError('请输入豆包API Key');
+    if (!registerForm.volcengineApiKey || !registerForm.cozePatToken) {
+      setError('请输入火山方舟 API Key ID 和扣子 PAT 令牌');
       return;
     }
 
@@ -89,7 +92,8 @@ export default function LoginPage() {
         body: JSON.stringify({
           username: registerForm.username,
           password: registerForm.password,
-          cozeApiKey: registerForm.cozeApiKey,
+          volcengineApiKey: registerForm.volcengineApiKey,
+          cozePatToken: registerForm.cozePatToken,
         }),
       });
 
@@ -165,23 +169,30 @@ export default function LoginPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="login-apikey">豆包 API Key（学生必填）</Label>
+                    <Label htmlFor="login-volcengine">火山方舟 API Key ID（学生必填）</Label>
                     <Input
-                      id="login-apikey"
+                      id="login-volcengine"
                       type="password"
-                      placeholder="请输入您的豆包API Key（格式：pat_xxx...）"
-                      value={loginForm.cozeApiKey}
-                      onChange={(e) => setLoginForm({ ...loginForm, cozeApiKey: e.target.value })}
+                      placeholder="请输入火山方舟 API Key ID"
+                      value={loginForm.volcengineApiKey}
+                      onChange={(e) => setLoginForm({ ...loginForm, volcengineApiKey: e.target.value })}
                     />
-                    <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                      <p>⚠️ 老师无需填写，学生必须填写才能使用AI出题</p>
-                      <p className="text-orange-600 dark:text-orange-400">
-                        💡 格式要求：以 <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">pat_</code> 开头
-                      </p>
-                      <p>
-                        📖 获取方式：<a href="https://www.coze.cn/" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">登录豆包官网 → 个人中心 → API管理 → 创建API Key</a>
-                      </p>
-                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      老师无需填写，学生必须填写（用于 AI 出题）
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-pat">扣子 PAT 令牌（学生必填）</Label>
+                    <Input
+                      id="login-pat"
+                      type="password"
+                      placeholder="请输入扣子 PAT 令牌"
+                      value={loginForm.cozePatToken}
+                      onChange={(e) => setLoginForm({ ...loginForm, cozePatToken: e.target.value })}
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      老师无需填写，学生必须填写（用于运行应用）
+                    </p>
                   </div>
                 </CardContent>
                 <CardFooter>
@@ -242,24 +253,32 @@ export default function LoginPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="register-apikey">豆包 API Key *</Label>
+                    <Label htmlFor="register-volcengine">火山方舟 API Key ID *</Label>
                     <Input
-                      id="register-apikey"
+                      id="register-volcengine"
                       type="password"
-                      placeholder="请输入您的豆包API Key（格式：pat_xxx...）"
-                      value={registerForm.cozeApiKey}
-                      onChange={(e) => setRegisterForm({ ...registerForm, cozeApiKey: e.target.value })}
+                      placeholder="请输入火山方舟 API Key ID"
+                      value={registerForm.volcengineApiKey}
+                      onChange={(e) => setRegisterForm({ ...registerForm, volcengineApiKey: e.target.value })}
                       required
                     />
-                    <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                      <p>⚠️ 学生账户必须填写豆包API Key才能使用AI出题功能</p>
-                      <p className="text-orange-600 dark:text-orange-400">
-                        💡 格式要求：以 <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">pat_</code> 开头
-                      </p>
-                      <p>
-                        📖 获取方式：<a href="https://www.coze.cn/" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">登录豆包官网 → 个人中心 → API管理 → 创建API Key</a>
-                      </p>
-                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      💡 获取方式：<a href="https://console.volcengine.com/ark" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">火山方舟控制台 → API Key 管理</a>
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="register-pat">扣子 PAT 令牌 *</Label>
+                    <Input
+                      id="register-pat"
+                      type="password"
+                      placeholder="请输入扣子 PAT 令牌"
+                      value={registerForm.cozePatToken}
+                      onChange={(e) => setRegisterForm({ ...registerForm, cozePatToken: e.target.value })}
+                      required
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      💡 获取方式：<a href="https://www.coze.cn/" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">扣子官网 → 个人中心 → PAT 令牌管理</a>
+                    </p>
                   </div>
                 </CardContent>
                 <CardFooter>

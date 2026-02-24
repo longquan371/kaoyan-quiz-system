@@ -18,7 +18,8 @@ export const users = pgTable(
     password: varchar("password", { length: 255 }).notNull(),
     role: varchar("role", { length: 20 }).notNull().default("student"), // 'student' or 'teacher'
     totalScore: integer("total_score").default(0).notNull(),
-    cozeApiKey: text("coze_api_key"), // 学生需要填写豆包API Key
+    volcengineApiKey: text("volcengine_api_key"), // 火山方舟 API Key ID（用于AI出题）
+    cozePatToken: text("coze_pat_token"), // 扣子 PAT 令牌（用于运行应用）
     createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' })
       .defaultNow()
       .notNull(),
@@ -97,7 +98,8 @@ export const insertUserSchema = createCoercedInsertSchema(users).pick({
   username: true,
   password: true,
   role: true,
-  cozeApiKey: true,
+  volcengineApiKey: true,
+  cozePatToken: true,
 });
 
 export const insertQuestionSchema = createCoercedInsertSchema(questions).pick({
