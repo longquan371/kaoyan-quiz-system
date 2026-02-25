@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import mammoth from 'mammoth';
+import { readFile } from 'fs/promises';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,10 +17,10 @@ export async function POST(request: NextRequest) {
 
     const client = getSupabaseClient();
 
-    // 获取用户信息和 API Key
+    // 获取用户信息
     const { data: users } = await client
       .from('users')
-      .select('volcengine_api_key, coze_pat_token')
+      .select('*')
       .eq('id', userId)
       .limit(1);
 
@@ -32,16 +33,42 @@ export async function POST(request: NextRequest) {
 
     const user = users[0];
 
-    // 获取示例文档内容
-    const docxBuffer = await mammoth.extractRawText({ path: '/tmp/news_exam.docx' });
-    const documentContent = docxBuffer.value;
+    // 根据用户选择的题库获取文档内容
+    let documentContent = '';
+    let sourceDocumentName = '';
 
+    if (user.selected_document === 'default' || !user.selected_document) {
+      // 使用默认示例文档
+      const docxBuffer = await mammoth.extractRawText({ path: '/tmp/news_exam.docx' });
+      documentContent = docxBuffer.value;
+      sourceDocumentName = '示例考研题.docx';
+    } else {
+      // 从数据库获取文档路径
+      const { data: documents } = await client
+        .from('documents')
+        .select('*')
+        .eq('id', user.selected_document)
+        .limit(1);
+
+      if (!documents || documents.length === 0) {
+        return NextResponse.json(
+          { error: '题库文档不存在' },
+          { status: 404 }
+        );
+      }
+
+      const document = documents[0];
+      
+      // 读取文档内容
+      const docxBuffer = await mammoth.extractRawText({ path: document.file_url });
+      documentContent = docxBuffer.value;
+      sourceDocumentName = document.filename;
+    }
+
+    console.log('Using question bank:', sourceDocumentName);
     console.log('Document content length:', documentContent.length);
-    console.log('Available API Keys configured');
 
     // 调用豆包 LLM 生成题目
-    // 在扣子平台上运行时，SDK 会自动从环境变量获取认证信息
-    // 不需要手动提供 apiKey
     const config = new Config();
     const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
     const llmClient = new LLMClient(config, customHeaders);
@@ -106,7 +133,7 @@ ${documentContent}
           type: question.type,
           options: question.type === 'choice' ? question.options : null,
           correct_answer: question.correct_answer,
-          source_document: 'news_exam.docx',
+          source_document: sourceDocumentName,
         })
         .select()
         .single();

@@ -4,7 +4,7 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password } = await request.json();
+    const { username, password, selectedDocument } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json(
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     // 加密密码
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 创建新用户（不需要 API Key，系统会自动处理）
+    // 创建新用户
     const { data: newUser, error } = await client
       .from('users')
       .insert({
@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
         password: hashedPassword,
         role: 'student',
         total_score: 0,
+        selected_document: selectedDocument || 'default',
       })
       .select()
       .single();

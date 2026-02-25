@@ -1,25 +1,61 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+interface QuestionBank {
+  id: string;
+  filename: string;
+  uploaded_at: string;
+}
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [questionBanks, setQuestionBanks] = useState<QuestionBank[]>([]);
+  const [loadingBanks, setLoadingBanks] = useState(true);
   const [loginForm, setLoginForm] = useState({
     username: '',
     password: '',
+    selectedDocument: 'default',
   });
   const [registerForm, setRegisterForm] = useState({
     username: '',
     password: '',
     confirmPassword: '',
+    selectedDocument: 'default',
   });
+
+  // 加载题库列表
+  useEffect(() => {
+    const loadQuestionBanks = async () => {
+      try {
+        const response = await fetch('/api/question-banks');
+        const data = await response.json();
+        if (response.ok) {
+          setQuestionBanks(data.questionBanks || []);
+        }
+      } catch (err) {
+        console.error('加载题库失败:', err);
+      } finally {
+        setLoadingBanks(false);
+      }
+    };
+
+    loadQuestionBanks();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +81,7 @@ export default function LoginPage() {
         body: JSON.stringify({
           username: loginForm.username,
           password: loginForm.password,
+          selectedDocument: loginForm.selectedDocument,
         }),
       });
 
@@ -81,6 +118,7 @@ export default function LoginPage() {
         body: JSON.stringify({
           username: registerForm.username,
           password: registerForm.password,
+          selectedDocument: registerForm.selectedDocument,
         }),
       });
 
@@ -155,6 +193,28 @@ export default function LoginPage() {
                       required
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-questionbank">选择题库</Label>
+                    <Select
+                      value={loginForm.selectedDocument}
+                      onValueChange={(value) => setLoginForm({ ...loginForm, selectedDocument: value })}
+                      disabled={loadingBanks}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={loadingBanks ? '加载中...' : '请选择题库'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {questionBanks.map((bank) => (
+                          <SelectItem key={bank.id} value={bank.id}>
+                            {bank.filename}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      选择题库后，题目将从该题库中生成
+                    </p>
+                  </div>
                 </CardContent>
                 <CardFooter>
                   <Button type="submit" className="w-full" disabled={isLoading}>
@@ -212,6 +272,28 @@ export default function LoginPage() {
                       onChange={(e) => setRegisterForm({ ...registerForm, confirmPassword: e.target.value })}
                       required
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="register-questionbank">选择题库</Label>
+                    <Select
+                      value={registerForm.selectedDocument}
+                      onValueChange={(value) => setRegisterForm({ ...registerForm, selectedDocument: value })}
+                      disabled={loadingBanks}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={loadingBanks ? '加载中...' : '请选择题库'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {questionBanks.map((bank) => (
+                          <SelectItem key={bank.id} value={bank.id}>
+                            {bank.filename}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      选择题库后，题目将从该题库中生成
+                    </p>
                   </div>
                 </CardContent>
                 <CardFooter>

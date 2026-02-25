@@ -4,7 +4,7 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password } = await request.json();
+    const { username, password, selectedDocument } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json(
@@ -47,6 +47,16 @@ export async function POST(request: NextRequest) {
         { error: '用户名或密码错误' },
         { status: 401 }
       );
+    }
+
+    // 如果提供了题库选择，更新用户的题库
+    if (selectedDocument && user.role === 'student') {
+      await client
+        .from('users')
+        .update({ selected_document: selectedDocument })
+        .eq('id', user.id);
+      
+      user.selected_document = selectedDocument;
     }
 
     // 返回用户信息（不包含密码）
