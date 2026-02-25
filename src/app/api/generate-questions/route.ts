@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import mammoth from 'mammoth';
-import { readFile } from 'fs/promises';
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,37 +32,45 @@ export async function POST(request: NextRequest) {
 
     const user = users[0];
 
-    // 根据用户选择的题库获取文档内容
-    let documentContent = '';
-    let sourceDocumentName = '';
-
-    if (user.selected_document === 'default' || !user.selected_document) {
-      // 使用默认示例文档
-      const docxBuffer = await mammoth.extractRawText({ path: '/tmp/news_exam.docx' });
-      documentContent = docxBuffer.value;
-      sourceDocumentName = '示例考研题.docx';
-    } else {
-      // 从数据库获取文档路径
-      const { data: documents } = await client
+    // 如果用户没有选择题库，使用最新的文档
+    let documentId = user.selected_document;
+    if (!documentId) {
+      const { data: latestDoc } = await client
         .from('documents')
-        .select('*')
-        .eq('id', user.selected_document)
+        .select('id')
+        .order('uploaded_at', { ascending: false })
         .limit(1);
-
-      if (!documents || documents.length === 0) {
+      
+      if (latestDoc && latestDoc.length > 0) {
+        documentId = latestDoc[0].id;
+      } else {
         return NextResponse.json(
-          { error: '题库文档不存在' },
-          { status: 404 }
+          { error: '暂无可用的题库，请联系老师上传文档' },
+          { status: 400 }
         );
       }
-
-      const document = documents[0];
-      
-      // 读取文档内容
-      const docxBuffer = await mammoth.extractRawText({ path: document.file_url });
-      documentContent = docxBuffer.value;
-      sourceDocumentName = document.filename;
     }
+
+    // 从数据库获取文档路径
+    const { data: documents } = await client
+      .from('documents')
+      .select('*')
+      .eq('id', documentId)
+      .limit(1);
+
+    if (!documents || documents.length === 0) {
+      return NextResponse.json(
+        { error: '题库文档不存在' },
+        { status: 404 }
+      );
+    }
+
+    const document = documents[0];
+    
+    // 读取文档内容
+    const docxBuffer = await mammoth.extractRawText({ path: document.file_url });
+    const documentContent = docxBuffer.value;
+    const sourceDocumentName = document.filename;
 
     console.log('Using question bank:', sourceDocumentName);
     console.log('Document content length:', documentContent.length);

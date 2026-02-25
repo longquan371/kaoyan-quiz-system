@@ -29,13 +29,13 @@ export default function LoginPage() {
   const [loginForm, setLoginForm] = useState({
     username: '',
     password: '',
-    selectedDocument: 'default',
+    selectedDocument: '',
   });
   const [registerForm, setRegisterForm] = useState({
     username: '',
     password: '',
     confirmPassword: '',
-    selectedDocument: 'default',
+    selectedDocument: '',
   });
 
   // 加载题库列表
@@ -45,7 +45,14 @@ export default function LoginPage() {
         const response = await fetch('/api/question-banks');
         const data = await response.json();
         if (response.ok) {
-          setQuestionBanks(data.questionBanks || []);
+          const banks = data.questionBanks || [];
+          setQuestionBanks(banks);
+          
+          // 如果有题库，默认选择第一个
+          if (banks.length > 0) {
+            setLoginForm(prev => ({ ...prev, selectedDocument: banks[0].id }));
+            setRegisterForm(prev => ({ ...prev, selectedDocument: banks[0].id }));
+          }
         }
       } catch (err) {
         console.error('加载题库失败:', err);
@@ -106,6 +113,11 @@ export default function LoginPage() {
 
     if (registerForm.password !== registerForm.confirmPassword) {
       setError('两次密码输入不一致');
+      return;
+    }
+
+    if (!registerForm.selectedDocument) {
+      setError('请选择题库');
       return;
     }
 
@@ -198,10 +210,14 @@ export default function LoginPage() {
                     <Select
                       value={loginForm.selectedDocument}
                       onValueChange={(value) => setLoginForm({ ...loginForm, selectedDocument: value })}
-                      disabled={loadingBanks}
+                      disabled={loadingBanks || questionBanks.length === 0}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={loadingBanks ? '加载中...' : '请选择题库'} />
+                        <SelectValue placeholder={
+                          loadingBanks ? '加载中...' : 
+                          questionBanks.length === 0 ? '暂无可用题库' : 
+                          '请选择题库'
+                        } />
                       </SelectTrigger>
                       <SelectContent>
                         {questionBanks.map((bank) => (
@@ -278,10 +294,14 @@ export default function LoginPage() {
                     <Select
                       value={registerForm.selectedDocument}
                       onValueChange={(value) => setRegisterForm({ ...registerForm, selectedDocument: value })}
-                      disabled={loadingBanks}
+                      disabled={loadingBanks || questionBanks.length === 0}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={loadingBanks ? '加载中...' : '请选择题库'} />
+                        <SelectValue placeholder={
+                          loadingBanks ? '加载中...' : 
+                          questionBanks.length === 0 ? '暂无可用题库' : 
+                          '请选择题库'
+                        } />
                       </SelectTrigger>
                       <SelectContent>
                         {questionBanks.map((bank) => (

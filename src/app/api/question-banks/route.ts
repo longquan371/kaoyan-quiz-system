@@ -19,35 +19,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 如果没有文档，使用默认示例文档
-    if (!documents || documents.length === 0) {
-      return NextResponse.json({
-        questionBanks: [
-          {
-            id: 'default',
-            filename: '示例考研题',
-            uploaded_at: new Date().toISOString(),
-          },
-        ],
-      });
-    }
-
-    // 添加默认选项
-    const questionBanks = [
-      {
-        id: 'default',
-        filename: '示例考研题',
-        uploaded_at: new Date().toISOString(),
-      },
-      ...documents.map((doc: any) => ({
-        id: doc.id,
-        filename: doc.filename,
-        uploaded_at: doc.uploaded_at,
-      })),
-    ];
-
     return NextResponse.json({
-      questionBanks,
+      questionBanks: documents || [],
     });
   } catch (error) {
     console.error('Get question banks error:', error);
