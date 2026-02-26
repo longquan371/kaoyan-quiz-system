@@ -66,7 +66,28 @@ export async function POST(request: NextRequest) {
     }
 
     const document = documents[0];
-    
+
+    // 获取用户最近回答过的题目（避免重复）
+    const { data: userAnswers } = await client
+      .from('score_records')
+      .select('question_id')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    const answeredQuestionIds = userAnswers?.map(a => a.question_id) || [];
+
+    // 获取这些题目的内容，用于在prompt中排除
+    let excludedTopics: string[] = [];
+    if (answeredQuestionIds.length > 0) {
+      const { data: answeredQuestions } = await client
+        .from('questions')
+        .select('content')
+        .in('id', answeredQuestionIds.slice(0, 10)); // 只取最近的10道
+
+      excludedTopics = answeredQuestions?.map(q => q.content.substring(0, 50)) || [];
+    }
+
     // 读取文档内容
     const docxBuffer = await mammoth.extractRawText({ path: document.file_url });
     const documentContent = docxBuffer.value;
@@ -75,6 +96,7 @@ export async function POST(request: NextRequest) {
     console.log('Using question bank:', sourceDocumentName);
     console.log('Document content length:', documentContent.length);
     console.log('Sequential mode:', user.sequential_mode);
+    console.log('Excluded topics count:', excludedTopics.length);
 
     // 调用豆包 LLM 生成题目
     const config = new Config();
@@ -83,16 +105,30 @@ export async function POST(request: NextRequest) {
 
     // 根据是否按顺序出题，使用不同的prompt
     let prompt = '';
+    const randomSeed = Math.floor(Math.random() * 10000); // 随机种子，增加多样性
+
+    // 构建已回答题目的排除信息
+    const excludedTopicsText = excludedTopics.length > 0
+      ? `以下题目是用户最近已经回答过的，请绝对不要出类似的题目：
+${excludedTopics.map((t, i) => `${i + 1}. ${t}...`).join('\n')}
+
+`
+      : '';
+
     if (user.sequential_mode) {
       // 按顺序出题模式
       prompt = `你是一个专业的考研出题老师。请根据以下文档内容，按顺序生成5道题（3道选择题和2道填空题）。
 
-要求：
-1. 从文首开始，按照自然段的顺序出题
-2. 每个自然段至少生成一道题（如果自然段较少，前面的自然段可以生成多道题）
-3. 总共生成5道题（3道选择题和2道填空题）
-4. 选择题和填空题交替或按顺序分配到各个自然段
-5. 题目要基于文档内容，考察重点知识
+重要要求（必须严格遵守）：
+1. 每次出题必须选择不同的知识点！绝对不要重复之前出过的题目
+2. 请随机选择一个起始自然段（文档的前50%到70%之间的位置），然后从该段开始按照自然段的顺序出题
+3. 每个自然段至少生成一道题（如果自然段较少，前面的自然段可以生成多道题）
+4. 总共生成5道题（3道选择题和2道填空题）
+5. 选择题和填空题交替或按顺序分配到各个自然段
+6. 题目要基于文档内容，考察重点知识点，不要都是问同一个问题
+
+${excludedTopicsText}随机种子：${randomSeed}
+当前时间：${new Date().getTime()}
 
 文档内容：
 ${documentContent}
@@ -101,6 +137,15 @@ ${documentContent}
     } else {
       // 随机出题模式（默认）
       prompt = `你是一个专业的考研出题老师。请根据以下文档内容，生成3道选择题和2道填空题。
+
+重要要求（必须严格遵守）：
+1. 每次出题必须选择不同的知识点！绝对不要重复之前出过的题目
+2. 题目必须来自文档的不同部分，不要总是选择相同的内容
+3. 每次生成的题目要完全不同，避免相似或重复
+4. 题目要基于文档内容，考察不同的重点知识点
+
+${excludedTopicsText}随机种子：${randomSeed}
+当前时间：${new Date().getTime()}
 
 文档内容：
 ${documentContent}
@@ -139,7 +184,7 @@ ${documentContent}
 
     const response = await llmClient.invoke(
       [{ role: 'user', content: prompt }],
-      { temperature: 0.7 }
+      { temperature: 1.0 } // 最高温度以最大化多样性
     );
 
     console.log('LLM response:', response.content.substring(0, 100) + '...');
