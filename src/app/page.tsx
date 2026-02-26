@@ -158,12 +158,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat bg-fixed p-4" style={{backgroundImage: 'url("/background-image.png")'}}>
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 bg-gray-700/70 rounded-lg p-6 backdrop-blur-sm">
           <h1 className="text-4xl font-bold text-white mb-2">
-            考研自测系统
+            瓦叔带你考上研！
           </h1>
           <p className="text-white">
-            AI 智能出题，助力考研复习
+            今天也是充满斗志的一天
           </p>
         </div>
 
