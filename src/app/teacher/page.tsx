@@ -99,7 +99,7 @@ export default function TeacherPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-purple-900 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat bg-fixed p-4" style={{backgroundImage: 'url("/background-image.png")'}}>
         <Card className="w-full max-w-md shadow-xl">
           <CardContent className="pt-6">
             <div className="text-center">
@@ -113,7 +113,7 @@ export default function TeacherPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-purple-900 p-4">
+    <div className="min-h-screen bg-cover bg-center bg-no-repeat bg-fixed p-4" style={{backgroundImage: 'url("/background-image.png")'}}>
       <div className="max-w-6xl mx-auto py-8">
         {/* 顶部导航 */}
         <div className="flex justify-between items-center mb-8">
