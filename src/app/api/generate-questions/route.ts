@@ -42,6 +42,8 @@ export async function POST(request: NextRequest) {
 
     const user = users[0];
 
+    console.log(`[Generate Questions] User: ${user.username}, Sequential Mode: ${user.sequential_mode}, Current Paragraph Index: ${user.current_paragraph_index}`);
+
     // 如果用户没有选择题库，使用最新的文档
     let documentId = user.selected_document;
     if (!documentId) {
