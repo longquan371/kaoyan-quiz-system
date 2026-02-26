@@ -158,13 +158,15 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat bg-fixed p-4" style={{backgroundImage: 'url("/background-image.png")'}}>
       <div className="w-full max-w-md">
-        <div className="text-center mb-8 bg-gray-700/15 rounded-lg p-4 backdrop-blur-sm inline-block">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            瓦叔带你考上研！
-          </h1>
-          <p className="text-white">
-            今天也是充满斗志的一天
-          </p>
+        <div className="text-center mb-8">
+          <div className="bg-gray-700/15 rounded-lg p-4 backdrop-blur-sm inline-block mx-auto">
+            <h1 className="text-4xl font-bold text-white mb-2">
+              瓦叔带你考上研！
+            </h1>
+            <p className="text-white">
+              今天也是充满斗志的一天
+            </p>
+          </div>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
