@@ -15,7 +15,7 @@ function splitIntoParagraphs(content: string): string[] {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await request.json();
+    const { userId, retrain = false } = await request.json();
 
     if (!userId) {
       return NextResponse.json(
@@ -101,6 +101,12 @@ export async function POST(request: NextRequest) {
       // 获取当前出题进度（默认为0）
       let currentParagraphIndex = user.current_paragraph_index || 0;
 
+      // 如果是重新训练模式，需要回退5段（回到上一轮的起始位置）
+      if (retrain && currentParagraphIndex >= 5) {
+        currentParagraphIndex = currentParagraphIndex - 5;
+        console.log(`Retrain mode: Going back to paragraph ${currentParagraphIndex}`);
+      }
+
       // 将文档按自然段分割
       const paragraphs = splitIntoParagraphs(documentContent);
       console.log(`Total paragraphs: ${paragraphs.length}, Starting from: ${currentParagraphIndex}`);
@@ -150,7 +156,8 @@ export async function POST(request: NextRequest) {
 
       prompt = `你是一个专业的考研出题老师。请根据以下各个段落的内容，为每个段落生成一道题。
 
-${!isFirstRound ? `重要提示：这是新一轮出题循环，请生成与之前完全不同的题目！` : ''}
+${retrain ? `【重要提示】这是重新训练模式！请针对这些段落生成与之前完全不同的题目！` : ''}
+${!isFirstRound && !retrain ? `重要提示：这是新一轮出题循环，请生成与之前完全不同的题目！` : ''}
 
 总共需要生成 ${selectedParagraphs.length} 道题。
 段落顺序和题目要求：
@@ -168,8 +175,9 @@ ${excludedQuestions.map((q, i) => `${i + 1}. ${q}...`).join('\n')}
 题目分配规则：
 1. 前 ${Math.ceil(questionsToGenerate * 0.6)} 道题生成选择题，后 ${Math.floor(questionsToGenerate * 0.4)} 道题生成填空题
 2. 每道题必须严格按照对应的段落内容出题，不要出其他段落的题
-3. ${!isFirstRound ? '必须生成与之前完全不同的题目，变换提问方式、考察角度或知识点！' : ''}
-4. 填空题答案要在10个字符以内
+3. ${retrain ? '必须生成与之前完全不同的题目！变换提问方式、考察角度或知识点！不要出重复的题！' : ''}
+4. ${!isFirstRound && !retrain ? '必须生成与之前完全不同的题目，变换提问方式、考察角度或知识点！' : ''}
+5. 填空题答案要在10个字符以内
 
 请严格按照以下JSON格式返回题目：
 
@@ -196,16 +204,20 @@ ${excludedQuestions.map((q, i) => `${i + 1}. ${q}...`).join('\n')}
 
 重要：
 - 严格按照段落的顺序，为每个段落生成一道题
+- ${retrain ? '这是重新训练，必须生成新题目，不要重复！' : ''}
 - 只返回JSON，不要有任何其他文字`;
 
-      // 生成题目后，更新用户的出题进度
-      const newParagraphIndex = currentParagraphIndex + questionsToGenerate;
-      await client
-        .from('users')
-        .update({ current_paragraph_index: newParagraphIndex })
-        .eq('id', userId);
-
-      console.log(`Updated current_paragraph_index to ${newParagraphIndex}`);
+      // 生成题目后，更新用户的出题进度（重新训练模式不更新进度）
+      if (!retrain) {
+        const newParagraphIndex = currentParagraphIndex + questionsToGenerate;
+        await client
+          .from('users')
+          .update({ current_paragraph_index: newParagraphIndex })
+          .eq('id', userId);
+        console.log(`Updated current_paragraph_index to ${newParagraphIndex}`);
+      } else {
+        console.log(`Retrain mode: Not updating current_paragraph_index, remains at ${currentParagraphIndex}`);
+      }
 
     } else {
       // === 随机出题模式 ===

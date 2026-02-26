@@ -48,7 +48,7 @@ export default function StudentPage() {
     generateQuestions(parsedUser.id);
   }, [router]);
 
-  const generateQuestions = async (userId: string) => {
+  const generateQuestions = async (userId: string, retrain: boolean = false) => {
     setIsLoading(true);
     setError('');
 
@@ -56,7 +56,7 @@ export default function StudentPage() {
       const response = await fetch('/api/generate-questions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId, retrain }),
       });
 
       const data = await response.json();
@@ -126,7 +126,13 @@ export default function StudentPage() {
   const handleNextRound = () => {
     setAnswers({});
     setResult(null);
-    generateQuestions(user.id);
+    generateQuestions(user.id, false);
+  };
+
+  const handleRetrain = () => {
+    setAnswers({});
+    setResult(null);
+    generateQuestions(user.id, true);
   };
 
   const handleLogout = () => {
@@ -229,9 +235,14 @@ export default function StudentPage() {
                   </div>
                 </div>
               ))}
-              <Button onClick={handleNextRound} className="w-full mt-6">
-                继续答题
-              </Button>
+              <div className="flex gap-3 mt-6">
+                <Button onClick={handleNextRound} className="flex-1" variant="default">
+                  继续答题
+                </Button>
+                <Button onClick={handleRetrain} className="flex-1" variant="outline">
+                  掌握不熟，重新训练
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : (
