@@ -4,7 +4,7 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password, selectedDocument } = await request.json();
+    const { username, password, selectedDocument, sequentialMode = false } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json(
@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
         role: 'student',
         total_score: 0,
         selected_document: selectedDocument || 'default',
+        sequential_mode: sequentialMode,
       })
       .select()
       .single();

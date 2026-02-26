@@ -4,7 +4,7 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password, selectedDocument } = await request.json();
+    const { username, password, selectedDocument, sequentialMode } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json(
@@ -57,6 +57,16 @@ export async function POST(request: NextRequest) {
         .eq('id', user.id);
       
       user.selected_document = selectedDocument;
+    }
+
+    // 如果提供了出题模式，更新用户的出题模式
+    if (sequentialMode !== undefined && user.role === 'student') {
+      await client
+        .from('users')
+        .update({ sequential_mode: sequentialMode })
+        .eq('id', user.id);
+      
+      user.sequential_mode = sequentialMode;
     }
 
     // 返回用户信息（不包含密码）

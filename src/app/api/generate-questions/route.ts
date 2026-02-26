@@ -74,18 +74,41 @@ export async function POST(request: NextRequest) {
 
     console.log('Using question bank:', sourceDocumentName);
     console.log('Document content length:', documentContent.length);
+    console.log('Sequential mode:', user.sequential_mode);
 
     // 调用豆包 LLM 生成题目
     const config = new Config();
     const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
     const llmClient = new LLMClient(config, customHeaders);
 
-    const prompt = `你是一个专业的考研出题老师。请根据以下文档内容，生成3道选择题和2道填空题。
+    // 根据是否按顺序出题，使用不同的prompt
+    let prompt = '';
+    if (user.sequential_mode) {
+      // 按顺序出题模式
+      prompt = `你是一个专业的考研出题老师。请根据以下文档内容，按顺序生成5道题（3道选择题和2道填空题）。
+
+要求：
+1. 从文首开始，按照自然段的顺序出题
+2. 每个自然段至少生成一道题（如果自然段较少，前面的自然段可以生成多道题）
+3. 总共生成5道题（3道选择题和2道填空题）
+4. 选择题和填空题交替或按顺序分配到各个自然段
+5. 题目要基于文档内容，考察重点知识
 
 文档内容：
 ${documentContent}
 
-请严格按照以下JSON格式返回题目，不要包含任何其他文字：
+请严格按照以下JSON格式返回题目，不要包含任何其他文字：`;
+    } else {
+      // 随机出题模式（默认）
+      prompt = `你是一个专业的考研出题老师。请根据以下文档内容，生成3道选择题和2道填空题。
+
+文档内容：
+${documentContent}
+
+请严格按照以下JSON格式返回题目，不要包含任何其他文字：`;
+    }
+
+    prompt += `
 
 {
   "questions": [
@@ -111,7 +134,7 @@ ${documentContent}
 要求：
 1. 选择题要有明确的4个选项（A/B/C/D）
 2. 填空题的答案要在10个字符以内
-3. 题目要基于文档内容，考察重点知识
+3. ${user.sequential_mode ? '严格按照自然段顺序出题，每个自然段至少一道题' : '题目可以来自文档的任意部分'}
 4. 只返回JSON，不要有任何其他文字`;
 
     const response = await llmClient.invoke(

@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface QuestionBank {
   id: string;
@@ -30,12 +31,14 @@ export default function LoginPage() {
     username: '',
     password: '',
     selectedDocument: '',
+    sequentialMode: false,
   });
   const [registerForm, setRegisterForm] = useState({
     username: '',
     password: '',
     confirmPassword: '',
     selectedDocument: '',
+    sequentialMode: false,
   });
 
   // 加载题库列表
@@ -89,6 +92,7 @@ export default function LoginPage() {
           username: loginForm.username,
           password: loginForm.password,
           selectedDocument: loginForm.selectedDocument,
+          sequentialMode: loginForm.sequentialMode,
         }),
       });
 
@@ -131,6 +135,7 @@ export default function LoginPage() {
           username: registerForm.username,
           password: registerForm.password,
           selectedDocument: registerForm.selectedDocument,
+          sequentialMode: registerForm.sequentialMode,
         }),
       });
 
@@ -231,6 +236,16 @@ export default function LoginPage() {
                       选择题库后，题目将从该题库中生成
                     </p>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="login-sequential"
+                      checked={loginForm.sequentialMode}
+                      onCheckedChange={(checked) => setLoginForm({ ...loginForm, sequentialMode: checked as boolean })}
+                    />
+                    <Label htmlFor="login-sequential" className="text-sm font-normal cursor-pointer">
+                      按顺序出题（每个自然段至少一道题）
+                    </Label>
+                  </div>
                 </CardContent>
                 <CardFooter>
                   <Button type="submit" className="w-full" disabled={isLoading}>
@@ -314,6 +329,16 @@ export default function LoginPage() {
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       选择题库后，题目将从该题库中生成
                     </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="register-sequential"
+                      checked={registerForm.sequentialMode}
+                      onCheckedChange={(checked) => setRegisterForm({ ...registerForm, sequentialMode: checked as boolean })}
+                    />
+                    <Label htmlFor="register-sequential" className="text-sm font-normal cursor-pointer">
+                      按顺序出题（每个自然段至少一道题）
+                    </Label>
                   </div>
                 </CardContent>
                 <CardFooter>
