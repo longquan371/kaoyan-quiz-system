@@ -196,7 +196,7 @@ export default function StudentPage() {
 
         {result ? (
           // 显示结果
-          <Card className="shadow-xl border-2">
+          <Card className="shadow-xl border-2 bg-white bg-cover bg-center bg-no-repeat" style={{backgroundImage: 'url("/result-background.png")'}}>
             <CardHeader>
               <CardTitle>答题结果</CardTitle>
               <CardDescription>
