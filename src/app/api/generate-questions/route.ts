@@ -3,6 +3,16 @@ import { LLMClient, Config, HeaderUtils } from 'coze-coding-dev-sdk';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import mammoth from 'mammoth';
 
+// 按自然段分割文档内容
+function splitIntoParagraphs(content: string): string[] {
+  // 按双换行符或单换行符分割，过滤空段落
+  const paragraphs = content
+    .split(/\n\s*\n|\n/)
+    .map(p => p.trim())
+    .filter(p => p.length > 10); // 过滤掉太短的段落（少于10个字符）
+  return paragraphs;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await request.json();
@@ -40,7 +50,7 @@ export async function POST(request: NextRequest) {
         .select('id')
         .order('uploaded_at', { ascending: false })
         .limit(1);
-      
+
       if (latestDoc && latestDoc.length > 0) {
         documentId = latestDoc[0].id;
       } else {
@@ -67,27 +77,6 @@ export async function POST(request: NextRequest) {
 
     const document = documents[0];
 
-    // 获取用户最近回答过的题目（避免重复）
-    const { data: userAnswers } = await client
-      .from('score_records')
-      .select('question_id')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(20);
-
-    const answeredQuestionIds = userAnswers?.map(a => a.question_id) || [];
-
-    // 获取这些题目的内容，用于在prompt中排除
-    let excludedTopics: string[] = [];
-    if (answeredQuestionIds.length > 0) {
-      const { data: answeredQuestions } = await client
-        .from('questions')
-        .select('content')
-        .in('id', answeredQuestionIds.slice(0, 10)); // 只取最近的10道
-
-      excludedTopics = answeredQuestions?.map(q => q.content.substring(0, 50)) || [];
-    }
-
     // 读取文档内容
     const docxBuffer = await mammoth.extractRawText({ path: document.file_url });
     const documentContent = docxBuffer.value;
@@ -96,64 +85,58 @@ export async function POST(request: NextRequest) {
     console.log('Using question bank:', sourceDocumentName);
     console.log('Document content length:', documentContent.length);
     console.log('Sequential mode:', user.sequential_mode);
-    console.log('Excluded topics count:', excludedTopics.length);
 
     // 调用豆包 LLM 生成题目
     const config = new Config();
     const customHeaders = HeaderUtils.extractForwardHeaders(request.headers);
     const llmClient = new LLMClient(config, customHeaders);
 
-    // 根据是否按顺序出题，使用不同的prompt
     let prompt = '';
-    const randomSeed = Math.floor(Math.random() * 10000); // 随机种子，增加多样性
-
-    // 构建已回答题目的排除信息
-    const excludedTopicsText = excludedTopics.length > 0
-      ? `以下题目是用户最近已经回答过的，请绝对不要出类似的题目：
-${excludedTopics.map((t, i) => `${i + 1}. ${t}...`).join('\n')}
-
-`
-      : '';
+    let questionsToGenerate = 5; // 默认生成5道题
 
     if (user.sequential_mode) {
-      // 按顺序出题模式
-      prompt = `你是一个专业的考研出题老师。请根据以下文档内容，按顺序生成5道题（3道选择题和2道填空题）。
+      // === 顺序出题模式 ===
+      // 获取当前出题进度（默认为0）
+      let currentParagraphIndex = user.current_paragraph_index || 0;
 
-重要要求（必须严格遵守）：
-1. 每次出题必须选择不同的知识点！绝对不要重复之前出过的题目
-2. 请随机选择一个起始自然段（文档的前50%到70%之间的位置），然后从该段开始按照自然段的顺序出题
-3. 每个自然段至少生成一道题（如果自然段较少，前面的自然段可以生成多道题）
-4. 总共生成5道题（3道选择题和2道填空题）
-5. 选择题和填空题交替或按顺序分配到各个自然段
-6. 题目要基于文档内容，考察重点知识点，不要都是问同一个问题
+      // 将文档按自然段分割
+      const paragraphs = splitIntoParagraphs(documentContent);
+      console.log(`Total paragraphs: ${paragraphs.length}, Starting from: ${currentParagraphIndex}`);
 
-${excludedTopicsText}随机种子：${randomSeed}
-当前时间：${new Date().getTime()}
+      // 检查是否还有足够的段落
+      if (currentParagraphIndex >= paragraphs.length) {
+        return NextResponse.json(
+          { error: '题库已全部完成，请联系老师添加新内容' },
+          { status: 400 }
+        );
+      }
 
-文档内容：
-${documentContent}
+      // 计算本次可以出多少道题（最多5道，但也要保证不超过剩余段落数）
+      const remainingParagraphs = paragraphs.length - currentParagraphIndex;
+      questionsToGenerate = Math.min(5, remainingParagraphs);
 
-请严格按照以下JSON格式返回题目，不要包含任何其他文字：`;
-    } else {
-      // 随机出题模式（默认）
-      prompt = `你是一个专业的考研出题老师。请根据以下文档内容，生成3道选择题和2道填空题。
+      // 取接下来的 N 个段落
+      const selectedParagraphs = paragraphs.slice(currentParagraphIndex, currentParagraphIndex + questionsToGenerate);
 
-重要要求（必须严格遵守）：
-1. 每次出题必须选择不同的知识点！绝对不要重复之前出过的题目
-2. 题目必须来自文档的不同部分，不要总是选择相同的内容
-3. 每次生成的题目要完全不同，避免相似或重复
-4. 题目要基于文档内容，考察不同的重点知识点
+      console.log(`Selected ${selectedParagraphs.length} paragraphs from index ${currentParagraphIndex}`);
 
-${excludedTopicsText}随机种子：${randomSeed}
-当前时间：${new Date().getTime()}
+      // 为每个段落生成一道题目
+      prompt = `你是一个专业的考研出题老师。请根据以下各个段落的内容，为每个段落生成一道题。
 
-文档内容：
-${documentContent}
+总共需要生成 ${selectedParagraphs.length} 道题。
+段落顺序和题目要求：
+${selectedParagraphs.map((para, index) => `
+第 ${currentParagraphIndex + index + 1} 段（必须为这一段出题）：
+"${para.substring(0, 150)}..."
 
-请严格按照以下JSON格式返回题目，不要包含任何其他文字：`;
-    }
+`).join('')}
 
-    prompt += `
+题目分配规则：
+1. 前 ${Math.ceil(questionsToGenerate * 0.6)} 道题生成选择题，后 ${Math.floor(questionsToGenerate * 0.4)} 道题生成填空题
+2. 每道题必须严格按照对应的段落内容出题，不要出其他段落的题
+3. 填空题答案要在10个字符以内
+
+请严格按照以下JSON格式返回题目：
 
 {
   "questions": [
@@ -176,15 +159,61 @@ ${documentContent}
   ]
 }
 
+重要：
+- 严格按照段落的顺序，为每个段落生成一道题
+- 只返回JSON，不要有任何其他文字`;
+
+      // 生成题目后，更新用户的出题进度
+      const newParagraphIndex = currentParagraphIndex + questionsToGenerate;
+      await client
+        .from('users')
+        .update({ current_paragraph_index: newParagraphIndex })
+        .eq('id', userId);
+
+      console.log(`Updated current_paragraph_index to ${newParagraphIndex}`);
+
+    } else {
+      // === 随机出题模式 ===
+      prompt = `你是一个专业的考研出题老师。请根据以下文档内容，生成3道选择题和2道填空题。
+
 要求：
-1. 选择题要有明确的4个选项（A/B/C/D）
-2. 填空题的答案要在10个字符以内
-3. ${user.sequential_mode ? '严格按照自然段顺序出题，每个自然段至少一道题' : '题目可以来自文档的任意部分'}
-4. 只返回JSON，不要有任何其他文字`;
+1. 题目可以来自文档的任意部分
+2. 每次生成的题目要不同，避免重复
+3. 题目要基于文档内容，考察不同的重点知识点
+
+文档内容：
+${documentContent}
+
+请严格按照以下JSON格式返回题目，不要包含任何其他文字：
+
+{
+  "questions": [
+    {
+      "type": "choice",
+      "content": "题目内容",
+      "options": [
+        {"label": "A", "text": "选项A内容"},
+        {"label": "B", "text": "选项B内容"},
+        {"label": "C", "text": "选项C内容"},
+        {"label": "D", "text": "选项D内容"}
+      ],
+      "correct_answer": "A"
+    },
+    {
+      "type": "fill",
+      "content": "题目内容（用____表示填空位置）",
+      "correct_answer": "答案内容（10个字符以内）"
+    }
+  ]
+}
+
+重要：
+- 只返回JSON，不要有任何其他文字`;
+    }
 
     const response = await llmClient.invoke(
       [{ role: 'user', content: prompt }],
-      { temperature: 1.0 } // 最高温度以最大化多样性
+      { temperature: 0.8 }
     );
 
     console.log('LLM response:', response.content.substring(0, 100) + '...');
