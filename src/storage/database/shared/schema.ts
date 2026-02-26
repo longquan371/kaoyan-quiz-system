@@ -1,4 +1,4 @@
-import { pgTable, varchar, text, timestamp, serial, index, jsonb, integer, unique } from "drizzle-orm/pg-core"
+import { pgTable, varchar, text, timestamp, serial, index, jsonb, integer, unique, boolean } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 
@@ -49,6 +49,9 @@ export const users = pgTable("users", {
 	cozeApiKey: text("coze_api_key"),
 	volcengineApiKey: text("volcengine_api_key"), // 火山方舟 API Key ID
 	cozePatToken: text("coze_pat_token"), // 扣子 PAT 令牌
+	selectedDocument: text("selected_document"),
+	sequentialMode: boolean("sequential_mode").default(false),
+	currentParagraphIndex: integer("current_paragraph_index").default(0),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }),
 }, (table) => [
