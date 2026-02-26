@@ -103,12 +103,35 @@ export async function POST(request: NextRequest) {
       const paragraphs = splitIntoParagraphs(documentContent);
       console.log(`Total paragraphs: ${paragraphs.length}, Starting from: ${currentParagraphIndex}`);
 
-      // 检查是否还有足够的段落
+      // 获取用户已经回答过的题目，用于去重
+      const { data: scoreRecords } = await client
+        .from('score_records')
+        .select('question_id')
+        .eq('user_id', userId);
+
+      const answeredQuestionIds = scoreRecords?.map(r => r.question_id) || [];
+
+      // 获取这些题目的内容，用于在prompt中排除
+      let excludedQuestions: string[] = [];
+      if (answeredQuestionIds.length > 0) {
+        const { data: answeredQuestions } = await client
+          .from('questions')
+          .select('content, source_document')
+          .in('id', answeredQuestionIds);
+
+        // 只排除来自当前文档的已回答题目
+        excludedQuestions = answeredQuestions
+          ?.filter(q => q.source_document === sourceDocumentName)
+          .map(q => q.content.substring(0, 100)) || [];
+      }
+
+      console.log(`Excluded ${excludedQuestions.length} previously answered questions`);
+
+      // 检查是否需要循环回到开头
       if (currentParagraphIndex >= paragraphs.length) {
-        return NextResponse.json(
-          { error: '题库已全部完成，请联系老师添加新内容' },
-          { status: 400 }
-        );
+        console.log('Reached end of document, cycling back to beginning');
+        currentParagraphIndex = 0;
+        // 不更新数据库，等到本次出题完成后再更新
       }
 
       // 计算本次可以出多少道题（最多5道，但也要保证不超过剩余段落数）
@@ -121,7 +144,11 @@ export async function POST(request: NextRequest) {
       console.log(`Selected ${selectedParagraphs.length} paragraphs from index ${currentParagraphIndex}`);
 
       // 为每个段落生成一道题目
+      const isFirstRound = currentParagraphIndex === 0 && excludedQuestions.length === 0;
+
       prompt = `你是一个专业的考研出题老师。请根据以下各个段落的内容，为每个段落生成一道题。
+
+${!isFirstRound ? `重要提示：这是新一轮出题循环，请生成与之前完全不同的题目！` : ''}
 
 总共需要生成 ${selectedParagraphs.length} 道题。
 段落顺序和题目要求：
@@ -131,10 +158,16 @@ ${selectedParagraphs.map((para, index) => `
 
 `).join('')}
 
+${excludedQuestions.length > 0 ? `
+以下题目是之前已经出过的，请绝对不要出类似的题目：
+${excludedQuestions.map((q, i) => `${i + 1}. ${q}...`).join('\n')}
+` : ''}
+
 题目分配规则：
 1. 前 ${Math.ceil(questionsToGenerate * 0.6)} 道题生成选择题，后 ${Math.floor(questionsToGenerate * 0.4)} 道题生成填空题
 2. 每道题必须严格按照对应的段落内容出题，不要出其他段落的题
-3. 填空题答案要在10个字符以内
+3. ${!isFirstRound ? '必须生成与之前完全不同的题目，变换提问方式、考察角度或知识点！' : ''}
+4. 填空题答案要在10个字符以内
 
 请严格按照以下JSON格式返回题目：
 
