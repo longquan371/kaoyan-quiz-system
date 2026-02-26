@@ -147,7 +147,7 @@ export default function StudentPage() {
           <CardContent className="pt-6">
             <div className="text-center">
               <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-              <p className="mt-4 text-gray-600 dark:text-gray-300">正在为您生成题目...</p>
+              <p className="mt-4 text-white">正在为您生成题目...</p>
             </div>
           </CardContent>
         </Card>
@@ -180,11 +180,11 @@ export default function StudentPage() {
         {/* 顶部导航 */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-white">
               欢迎同学
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mt-1">
-              当前总分：<span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <p className="text-white mt-1">
+              当前总分：<span className="text-2xl font-bold text-white">
                 {currentScore}
               </span> 分
             </p>

@@ -118,10 +118,10 @@ export default function TeacherPage() {
         {/* 顶部导航 */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-3xl font-bold text-white">
               老师后台
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mt-1">
+            <p className="text-white mt-1">
               管理学生成绩和上传新题目
             </p>
           </div>
