@@ -247,7 +247,7 @@ export default function StudentPage() {
           </Card>
         ) : (
           // 显示题目
-          <Card className="shadow-xl border-2">
+          <Card className="shadow-xl border-2 bg-white bg-cover bg-center bg-no-repeat" style={{backgroundImage: 'url("/question-background.png")'}}>
             <CardHeader>
               <CardTitle>测试题目</CardTitle>
               <CardDescription>
