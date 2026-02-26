@@ -23,13 +23,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 将文件保存到临时目录
+    // 创建上传目录（如果不存在）
+    const fs = require('fs');
+    const path = require('path');
+    const uploadDir = path.join(process.cwd(), 'uploads');
+
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // 将文件保存到永久目录
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     const filename = `${Date.now()}_${file.name}`;
-    const filepath = join('/tmp', filename);
+    const filepath = path.join(uploadDir, filename);
 
     await writeFile(filepath, buffer);
+    console.log(`File saved to: ${filepath}`);
 
     // 保存文件信息到数据库
     const client = getSupabaseClient();
@@ -45,6 +55,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    console.log(`Document saved successfully: ${file.name} -> ${filepath}`);
 
     return NextResponse.json({
       message: '文件上传成功',
